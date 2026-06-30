@@ -5,7 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sync"
 	"time"
 
@@ -15,14 +15,14 @@ import (
 
 // MQTTChannel MQTT通道结构体
 type MQTTChannel struct {
-	mutex           sync.RWMutex     // 读写锁
-	config          ChannelConfig    // 通道配置
-	client          mqtt.Client      // MQTT客户端
-	running         bool             // 是否运行中
-	onData          func([]byte)     // 数据接收回调
-	heartbeatTicker *time.Ticker     // 心跳定时器
-	registerTicker  *time.Ticker     // 注册包定时器
-	reconnectTimer  *time.Timer      // 重连定时器
+	mutex           sync.RWMutex  // 读写锁
+	config          ChannelConfig // 通道配置
+	client          mqtt.Client   // MQTT客户端
+	running         bool          // 是否运行中
+	onData          func([]byte)  // 数据接收回调
+	heartbeatTicker *time.Ticker  // 心跳定时器
+	registerTicker  *time.Ticker  // 注册包定时器
+	reconnectTimer  *time.Timer   // 重连定时器
 }
 
 // 初始化时注册MQTT工厂
@@ -146,7 +146,7 @@ func (c *MQTTChannel) connect() error {
 // createTLSConfig 创建TLS配置
 func (c *MQTTChannel) createTLSConfig() (*tls.Config, error) {
 	certpool := x509.NewCertPool()
-	ca, err := ioutil.ReadFile(c.config.MQTT.CAFile)
+	ca, err := os.ReadFile(c.config.MQTT.CAFile)
 	if err != nil {
 		logrus.Error("读取CA证书失败: ", err)
 		return nil, err

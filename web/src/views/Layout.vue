@@ -81,22 +81,19 @@
             <span>终端</span>
           </el-menu-item>
         </el-sub-menu>
-      </el-menu>
-      <div class="sidebar-footer">
-        <el-button @click="toggleCollapse" circle size="small">
-          <el-icon><Expand v-if="isCollapse" /><Fold v-else /></el-icon>
-        </el-button>
-        <el-button @click="logout" circle size="small">
+
+        <el-menu-item @click="logout">
           <el-icon><SwitchButton /></el-icon>
-        </el-button>
-      </div>
+          <span>退出登录</span>
+        </el-menu-item>
+      </el-menu>
     </aside>
     <main class="main-content" :class="{ collapse: isCollapse }">
       <header class="header">
         <div class="header-left">
-          <el-icon class="menu-toggle" @click="toggleCollapse">
-            <Menu />
-          </el-icon>
+          <el-button @click="toggleCollapse" circle size="small">
+            <el-icon><Menu /></el-icon>
+          </el-button>
           <h1>{{ currentTitle }}</h1>
         </div>
         <div class="header-right">
@@ -131,8 +128,6 @@ import {
   DataAnalysis,
   Tools,
   Menu,
-  Fold,
-  Expand,
   SwitchButton
 } from '@element-plus/icons-vue'
 
@@ -254,19 +249,6 @@ const logout = () => {
   background: rgba(64, 158, 255, 0.1);
 }
 
-.sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  justify-content: space-around;
-}
-
-.sidebar-footer .el-button {
-  background: rgba(64, 158, 255, 0.2);
-  border-color: rgba(64, 158, 255, 0.3);
-  color: #409eff;
-}
-
 .main-content {
   flex: 1;
   display: flex;
@@ -292,19 +274,6 @@ const logout = () => {
   display: flex;
   align-items: center;
   gap: 16px;
-}
-
-.menu-toggle {
-  font-size: 20px;
-  cursor: pointer;
-  color: #606266;
-  padding: 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.menu-toggle:hover {
-  background: #f0f2f5;
 }
 
 .header h1 {

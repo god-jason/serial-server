@@ -11,15 +11,15 @@ import (
 
 // SerialPort 串口端口结构体
 type SerialPort struct {
-	mutex             sync.RWMutex     // 读写锁
-	config            *SerialConfig    // 串口配置
-	running           bool             // 是否运行中
-	onData            func([]byte)     // 数据接收回调函数
-	buffer            bytes.Buffer     // 延迟封包缓冲区
-	delayTimer        *time.Timer      // 延迟封包定时器
-	delayTimeoutTimer *time.Timer      // 封包超时定时器
+	mutex             sync.RWMutex              // 读写锁
+	config            *SerialConfig             // 串口配置
+	running           bool                      // 是否运行中
+	onData            func([]byte)              // 数据接收回调函数
+	buffer            bytes.Buffer              // 延迟封包缓冲区
+	delayTimer        *time.Timer               // 延迟封包定时器
+	delayTimeoutTimer *time.Timer               // 封包超时定时器
 	writeFn           func([]byte) (int, error) // 实际写入函数
-	closeFn           func() error     // 实际关闭函数
+	closeFn           func() error              // 实际关闭函数
 }
 
 // SerialConfig 串口配置结构体
@@ -92,16 +92,8 @@ func (s *SerialPort) Close() error {
 
 // readLoop 读取循环（模拟实现）
 func (s *SerialPort) readLoop() {
-	buf := make([]byte, 4096)
-
 	for s.running {
-		n := 0
-		time.Sleep(10 * time.Millisecond)
-
-		if n > 0 {
-			data := buf[:n]
-			s.handleData(data)
-		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 

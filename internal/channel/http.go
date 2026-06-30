@@ -3,7 +3,7 @@ package channel
 import (
 	"bytes"
 	"encoding/hex"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 
@@ -12,11 +12,11 @@ import (
 
 // HTTPChannel HTTP通道结构体
 type HTTPChannel struct {
-	mutex   sync.RWMutex     // 读写锁
-	config  ChannelConfig    // 通道配置
-	running bool             // 是否运行中
-	onData  func([]byte)     // 数据接收回调
-	client  *http.Client     // HTTP客户端
+	mutex   sync.RWMutex  // 读写锁
+	config  ChannelConfig // 通道配置
+	running bool          // 是否运行中
+	onData  func([]byte)  // 数据接收回调
+	client  *http.Client  // HTTP客户端
 }
 
 // 初始化时注册HTTP工厂
@@ -103,7 +103,7 @@ func (c *HTTPChannel) Send(data []byte) error {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logrus.Error("读取HTTP响应失败: ", err)
 		return err
