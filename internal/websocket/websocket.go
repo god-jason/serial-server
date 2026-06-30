@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"net/http"
 	"os/exec"
+	"runtime"
 	"sync"
 
 	"github.com/creack/pty"
@@ -94,7 +95,11 @@ func (w *WebSocketManager) RemoveTermConnection(sessionID string, conn *websocke
 // StartTerminal 启动xterm终端
 func (w *WebSocketManager) StartTerminal(conn *websocket.Conn) {
 	var cmd *exec.Cmd
-	cmd = exec.Command("bash")
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("cmd")
+	} else {
+		cmd = exec.Command("bash")
+	}
 
 	f, err := pty.Start(cmd)
 	if err != nil {

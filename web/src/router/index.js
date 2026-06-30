@@ -1,25 +1,88 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { isLoggedIn, checkLoginStatus } from '../stores/session'
 
 const routes = [
   {
     path: '/',
-    name: 'Login',
-    component: () => import('../views/Login.vue')
+    redirect: '/home'
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: () => import('../views/Dashboard.vue'),
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/Login.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/',
+    component: () => import('../views/Layout.vue'),
+    meta: { requiresAuth: true },
     children: [
-      { path: 'gateway', name: 'Gateway', component: () => import('../views/Gateway.vue') },
-      { path: 'channels', name: 'Channels', component: () => import('../views/Channels.vue') },
-      { path: 'serial', name: 'Serial', component: () => import('../views/Serial.vue') },
-      { path: 'device', name: 'Device', component: () => import('../views/Device.vue') },
-      { path: 'maintenance', name: 'Maintenance', component: () => import('../views/Maintenance.vue') },
-      { path: 'debug', name: 'Debug', component: () => import('../views/Debug.vue') },
-      { path: 'terminal', name: 'Terminal', component: () => import('../views/Terminal.vue') },
-      { path: 'oem', name: 'OEM', component: () => import('../views/OEM.vue') },
-      { path: 'stats', name: 'Stats', component: () => import('../views/Stats.vue') }
+      {
+        path: 'home',
+        name: 'Home',
+        component: () => import('../views/Home.vue'),
+        meta: { title: '首页' }
+      },
+      {
+        path: 'serial',
+        name: 'Serial',
+        component: () => import('../views/Serial.vue'),
+        meta: { title: '串口配置' }
+      },
+      {
+        path: 'tcp-client',
+        name: 'TcpClient',
+        component: () => import('../views/TcpClient.vue'),
+        meta: { title: 'TCP客户端' }
+      },
+      {
+        path: 'tcp-server',
+        name: 'TcpServer',
+        component: () => import('../views/TcpServer.vue'),
+        meta: { title: 'TCP服务端' }
+      },
+      {
+        path: 'mqtt',
+        name: 'Mqtt',
+        component: () => import('../views/Mqtt.vue'),
+        meta: { title: 'MQTT' }
+      },
+      {
+        path: 'network',
+        name: 'Network',
+        component: () => import('../views/Network.vue'),
+        meta: { title: '网络配置' }
+      },
+      {
+        path: 'maintenance',
+        name: 'Maintenance',
+        component: () => import('../views/Maintenance.vue'),
+        meta: { title: '系统维护' }
+      },
+      {
+        path: 'stats',
+        name: 'Stats',
+        component: () => import('../views/Stats.vue'),
+        meta: { title: '流量统计' }
+      },
+      {
+        path: 'logs',
+        name: 'Logs',
+        component: () => import('../views/Logs.vue'),
+        meta: { title: '系统日志' }
+      },
+      {
+        path: 'debug',
+        name: 'Debug',
+        component: () => import('../views/Debug.vue'),
+        meta: { title: '串口调试' }
+      },
+      {
+        path: 'terminal',
+        name: 'Terminal',
+        component: () => import('../views/Terminal.vue'),
+        meta: { title: '终端' }
+      }
     ]
   }
 ]
@@ -29,10 +92,20 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token')
-  if (to.name !== 'Login' && !token) {
-    next({ name: 'Login' })
+let initCheckDone = false
+
+router.beforeEach(async (to, from, next) => {
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth !== false)
+
+  if (!initCheckDone && requiresAuth) {
+    await checkLoginStatus()
+    initCheckDone = true
+  }
+
+  if (requiresAuth && !isLoggedIn()) {
+    next('/login')
+  } else if (to.path === '/login' && isLoggedIn()) {
+    next('/home')
   } else {
     next()
   }

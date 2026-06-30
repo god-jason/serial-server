@@ -53,6 +53,7 @@
 <script setup>
 import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import api from '../utils/api'
+import { ElMessage } from 'element-plus'
 
 const serialPorts = ref([])
 const sendData = ref('')
@@ -75,7 +76,7 @@ onUnmounted(() => {
 
 const connect = () => {
   if (!debugForm.port) {
-    alert('请选择串口')
+    ElMessage.warning('请选择串口')
     return
   }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -89,7 +90,7 @@ const connect = () => {
     }
   }
   ws.onclose = () => {
-    alert('连接已断开')
+    ElMessage.info('连接已断开')
   }
 }
 
@@ -102,7 +103,7 @@ const disconnect = () => {
 
 const send = () => {
   if (!ws) {
-    alert('请先连接')
+    ElMessage.warning('请先连接')
     return
   }
   if (debugForm.format === 'hex') {

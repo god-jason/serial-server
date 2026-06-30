@@ -1,0 +1,237 @@
+<template>
+  <div class="mqtt">
+    <el-card class="main-card">
+      <template #header>
+        <div class="card-header">
+          <el-icon class="card-icon"><ChatDotRound /></el-icon>
+          <span>MQTT通道</span>
+          <el-button type="primary" @click="showAddDialog = true" class="add-btn">
+            <el-icon><Plus /></el-icon>
+            添加通道
+          </el-button>
+        </div>
+      </template>
+      <el-table :data="channels" border stripe>
+        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="name" label="名称" width="120" />
+        <el-table-column prop="serial_port" label="关联串口" width="120">
+          <template #default="{ row }">
+            {{ getSerialName(row.serial_port) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="mqtt.broker" label="Broker地址" width="200">
+          <template #default="{ row }">
+            {{ row.mqtt?.broker || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="mqtt.port" label="端口" width="100">
+          <template #default="{ row }">
+            {{ row.mqtt?.port || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="enabled" label="状态" width="100">
+          <template #default="{ row }">
+            <el-switch :value="row.enabled" @change="toggleChannel(row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="180">
+          <template #default="{ row }">
+            <el-button @click="editChannel(row)" text type="primary">编辑</el-button>
+            <el-button @click="deleteChannel(row)" text type="danger">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <el-dialog v-model="showAddDialog" :title="channelForm.id ? '编辑通道' : '添加MQTT通道'" width="600px">
+      <el-form :model="channelForm" label-width="120px">
+        <el-form-item label="名称">
+          <el-input v-model="channelForm.name" placeholder="请输入通道名称" />
+        </el-form-item>
+        <el-form-item label="关联串口">
+          <el-select v-model="channelForm.serial_port">
+            <el-option v-for="port in serialPorts" :key="port.id" :label="port.name" :value="port.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="Broker地址">
+          <el-input v-model="channelForm.mqtt.broker" placeholder="例如: tcp://mqtt.example.com" />
+        </el-form-item>
+        <el-form-item label="端口">
+          <el-input-number v-model="channelForm.mqtt.port" :min="1" :max="65535" />
+        </el-form-item>
+        <el-form-item label="用户名">
+          <el-input v-model="channelForm.mqtt.username" />
+        </el-form-item>
+        <el-form-item label="密码">
+          <el-input v-model="channelForm.mqtt.password" type="password" />
+        </el-form-item>
+        <el-form-item label="订阅Topic">
+          <el-input v-model="channelForm.mqtt.subscribe_topic" />
+        </el-form-item>
+        <el-form-item label="发送Topic">
+          <el-input v-model="channelForm.mqtt.send_topic" />
+        </el-form-item>
+        <el-form-item label="注册包">
+          <el-input v-model="channelForm.register_packet" placeholder="十六进制格式" />
+        </el-form-item>
+        <el-form-item label="心跳包">
+          <el-input v-model="channelForm.heartbeat_packet" placeholder="十六进制格式" />
+        </el-form-item>
+        <el-form-item label="心跳间隔(秒)">
+          <el-input-number v-model="channelForm.heartbeat_interval" :min="1" :max="3600" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showAddDialog = false">取消</el-button>
+        <el-button type="primary" @click="saveChannel">保存</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, reactive } from 'vue'
+import api from '../utils/api'
+import { ChatDotRound, Plus } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+const channels = ref([])
+const serialPorts = ref([])
+const showAddDialog = ref(false)
+
+const channelForm = reactive({
+  id: '',
+  name: '',
+  type: 'mqtt',
+  serial_port: '',
+  enabled: true,
+  register_packet: '',
+  heartbeat_packet: '',
+  heartbeat_interval: 30,
+  mqtt: { broker: '', port: 1883, username: '', password: '', subscribe_topic: '', send_topic: '' }
+})
+
+onMounted(async () => {
+  await loadChannels()
+  await loadSerialPorts()
+})
+
+const loadChannels = async () => {
+  try {
+    const response = await api.get('/channels/mqtt')
+    channels.value = response.data || []
+  } catch (error) {
+    console.error('获取通道失败:', error)
+  }
+}
+
+const loadSerialPorts = async () => {
+  try {
+    const response = await api.get('/serial/ports')
+    serialPorts.value = response.data || []
+  } catch (error) {
+    console.error('获取串口列表失败:', error)
+  }
+}
+
+const getSerialName = (id) => {
+  const port = serialPorts.value.find(p => p.id === id)
+  return port ? port.name : id
+}
+
+const saveChannel = async () => {
+  try {
+    if (channelForm.id) {
+      await api.put(`/channels/mqtt/${channelForm.id}`, channelForm)
+    } else {
+      await api.post('/channels/mqtt', channelForm)
+    }
+    showAddDialog.value = false
+    await loadChannels()
+    ElMessage.success('保存成功')
+  } catch (error) {
+    console.error('保存失败:', error)
+    ElMessage.error('保存失败')
+  }
+}
+
+const editChannel = (row) => {
+  Object.assign(channelForm, {
+    id: row.id,
+    name: row.name,
+    type: 'mqtt',
+    serial_port: row.serial_port,
+    enabled: row.enabled,
+    register_packet: row.register_packet || '',
+    heartbeat_packet: row.heartbeat_packet || '',
+    heartbeat_interval: row.heartbeat_interval || 30,
+    mqtt: {
+      broker: row.mqtt?.broker || '',
+      port: row.mqtt?.port || 1883,
+      username: row.mqtt?.username || '',
+      password: row.mqtt?.password || '',
+      subscribe_topic: row.mqtt?.subscribe_topic || '',
+      send_topic: row.mqtt?.send_topic || ''
+    }
+  })
+  showAddDialog.value = true
+}
+
+const deleteChannel = async (row) => {
+  ElMessageBox.confirm('确定删除此通道？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      await api.delete(`/channels/mqtt/${row.id}`)
+      await loadChannels()
+      ElMessage.success('删除成功')
+    } catch (error) {
+      ElMessage.error('删除失败')
+    }
+  }).catch(() => {})
+}
+
+const toggleChannel = async (row) => {
+  try {
+    if (row.enabled) {
+      await api.post(`/channels/${row.id}/enable`)
+    } else {
+      await api.post(`/channels/${row.id}/disable`)
+    }
+  } catch (error) {
+    console.error('切换状态失败:', error)
+    row.enabled = !row.enabled
+  }
+}
+</script>
+
+<style scoped>
+.mqtt {
+  width: 100%;
+}
+
+.main-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.card-icon {
+  color: #e6a23c;
+  font-size: 20px;
+}
+
+.add-btn {
+  margin-left: auto;
+}
+</style>

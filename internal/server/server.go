@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 	"github.com/god-jason/serial-server/internal/config"
 	"github.com/god-jason/serial-server/internal/serial"
@@ -61,8 +63,8 @@ func NewServer() *Server {
 func (s *Server) Start() error {
 	s.gin = gin.Default()
 
-	s.setupRoutes()
 	s.setupMiddleware()
+	s.setupRoutes()
 
 	cfg := config.Get()
 	addr := fmt.Sprintf(":%d", cfg.System.WebPort)
@@ -93,6 +95,13 @@ func (s *Server) Stop() error {
 func (s *Server) setupMiddleware() {
 	s.gin.Use(gin.Logger())
 	s.gin.Use(gin.Recovery())
+
+	store := cookie.NewStore([]byte(s.jwtSecret))
+	store.Options(sessions.Options{
+		MaxAge: 86400,
+		Path:   "/",
+	})
+	s.gin.Use(sessions.Sessions("serial-server-session", store))
 }
 
 // setupRoutes 设置路由
@@ -126,6 +135,21 @@ func (s *Server) setupRoutes() {
 	api.POST("/channels/:id/enable", s.enableChannel)
 	api.POST("/channels/:id/disable", s.disableChannel)
 
+	api.GET("/channels/tcp-client", s.listTCPClientChannels)
+	api.POST("/channels/tcp-client", s.addTCPClientChannel)
+	api.PUT("/channels/tcp-client/:id", s.updateTCPClientChannel)
+	api.DELETE("/channels/tcp-client/:id", s.deleteTCPClientChannel)
+
+	api.GET("/channels/tcp-server", s.listTCPServerChannels)
+	api.POST("/channels/tcp-server", s.addTCPServerChannel)
+	api.PUT("/channels/tcp-server/:id", s.updateTCPServerChannel)
+	api.DELETE("/channels/tcp-server/:id", s.deleteTCPServerChannel)
+
+	api.GET("/channels/mqtt", s.listMQTTChannels)
+	api.POST("/channels/mqtt", s.addMQTTChannel)
+	api.PUT("/channels/mqtt/:id", s.updateMQTTChannel)
+	api.DELETE("/channels/mqtt/:id", s.deleteMQTTChannel)
+
 	api.GET("/logs", s.getLogs)
 	api.GET("/stats", s.getStats)
 
@@ -149,12 +173,12 @@ var upgrader = gorilla.Upgrader{
 // authMiddleware 认证中间件
 func (s *Server) authMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		token := c.GetHeader("Authorization")
-		if token == "" {
+		session := sessions.Default(c)
+		login := session.Get("login")
+		if login != true {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "未授权"})
 			return
 		}
-
 		c.Next()
 	}
 }
@@ -172,7 +196,11 @@ func (s *Server) login(c *gin.Context) {
 
 	cfg := config.Get()
 	if req.Password == cfg.System.Password {
-		c.JSON(http.StatusOK, gin.H{"success": true, "token": "valid-token"})
+		session := sessions.Default(c)
+		session.Set("login", true)
+		session.Set("ip", c.ClientIP())
+		session.Save()
+		c.JSON(http.StatusOK, gin.H{"success": true})
 	} else {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "密码错误"})
 	}
@@ -502,6 +530,210 @@ func (s *Server) disableChannel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, gin.H{"error": "通道未找到"})
+}
+
+// listTCPClientChannels 列出TCP客户端通道
+func (s *Server) listTCPClientChannels(c *gin.Context) {
+	cfg := config.Get()
+	var tcpClientChannels []config.ChannelConfig
+	for _, ch := range cfg.Channels {
+		if ch.Type == "tcp_client" {
+			tcpClientChannels = append(tcpClientChannels, ch)
+		}
+	}
+	c.JSON(http.StatusOK, tcpClientChannels)
+}
+
+// addTCPClientChannel 添加TCP客户端通道
+func (s *Server) addTCPClientChannel(c *gin.Context) {
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "tcp_client"
+
+	cfg := config.Get()
+	cfg.Channels = append(cfg.Channels, channel)
+	config.Save()
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// updateTCPClientChannel 更新TCP客户端通道
+func (s *Server) updateTCPClientChannel(c *gin.Context) {
+	id := c.Param("id")
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "tcp_client"
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "tcp_client" {
+			cfg.Channels[i] = channel
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "TCP客户端通道未找到"})
+}
+
+// deleteTCPClientChannel 删除TCP客户端通道
+func (s *Server) deleteTCPClientChannel(c *gin.Context) {
+	id := c.Param("id")
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "tcp_client" {
+			cfg.Channels = append(cfg.Channels[:i], cfg.Channels[i+1:]...)
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "TCP客户端通道未找到"})
+}
+
+// listTCPServerChannels 列出TCP服务端通道
+func (s *Server) listTCPServerChannels(c *gin.Context) {
+	cfg := config.Get()
+	var tcpServerChannels []config.ChannelConfig
+	for _, ch := range cfg.Channels {
+		if ch.Type == "tcp_server" {
+			tcpServerChannels = append(tcpServerChannels, ch)
+		}
+	}
+	c.JSON(http.StatusOK, tcpServerChannels)
+}
+
+// addTCPServerChannel 添加TCP服务端通道
+func (s *Server) addTCPServerChannel(c *gin.Context) {
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "tcp_server"
+
+	cfg := config.Get()
+	cfg.Channels = append(cfg.Channels, channel)
+	config.Save()
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// updateTCPServerChannel 更新TCP服务端通道
+func (s *Server) updateTCPServerChannel(c *gin.Context) {
+	id := c.Param("id")
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "tcp_server"
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "tcp_server" {
+			cfg.Channels[i] = channel
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "TCP服务端通道未找到"})
+}
+
+// deleteTCPServerChannel 删除TCP服务端通道
+func (s *Server) deleteTCPServerChannel(c *gin.Context) {
+	id := c.Param("id")
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "tcp_server" {
+			cfg.Channels = append(cfg.Channels[:i], cfg.Channels[i+1:]...)
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "TCP服务端通道未找到"})
+}
+
+// listMQTTChannels 列出MQTT通道
+func (s *Server) listMQTTChannels(c *gin.Context) {
+	cfg := config.Get()
+	var mqttChannels []config.ChannelConfig
+	for _, ch := range cfg.Channels {
+		if ch.Type == "mqtt" {
+			mqttChannels = append(mqttChannels, ch)
+		}
+	}
+	c.JSON(http.StatusOK, mqttChannels)
+}
+
+// addMQTTChannel 添加MQTT通道
+func (s *Server) addMQTTChannel(c *gin.Context) {
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "mqtt"
+
+	cfg := config.Get()
+	cfg.Channels = append(cfg.Channels, channel)
+	config.Save()
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// updateMQTTChannel 更新MQTT通道
+func (s *Server) updateMQTTChannel(c *gin.Context) {
+	id := c.Param("id")
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "mqtt"
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "mqtt" {
+			cfg.Channels[i] = channel
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "MQTT通道未找到"})
+}
+
+// deleteMQTTChannel 删除MQTT通道
+func (s *Server) deleteMQTTChannel(c *gin.Context) {
+	id := c.Param("id")
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "mqtt" {
+			cfg.Channels = append(cfg.Channels[:i], cfg.Channels[i+1:]...)
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "MQTT通道未找到"})
 }
 
 // getLogs 获取日志接口
