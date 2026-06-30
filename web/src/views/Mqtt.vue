@@ -75,10 +75,22 @@
           <el-input v-model="channelForm.mqtt.send_topic" />
         </el-form-item>
         <el-form-item label="注册包">
-          <el-input v-model="channelForm.register_packet" placeholder="十六进制格式" />
+          <div class="packet-input-group">
+            <el-input v-model="channelForm.register_packet" :placeholder="registerPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
+            <el-button-group class="mode-switch">
+              <el-button :type="registerPacketMode === 'hex' ? 'primary' : ''" @click="registerPacketMode = 'hex'">HEX</el-button>
+              <el-button :type="registerPacketMode === 'ascii' ? 'primary' : ''" @click="registerPacketMode = 'ascii'">ASCII</el-button>
+            </el-button-group>
+          </div>
         </el-form-item>
         <el-form-item label="心跳包">
-          <el-input v-model="channelForm.heartbeat_packet" placeholder="十六进制格式" />
+          <div class="packet-input-group">
+            <el-input v-model="channelForm.heartbeat_packet" :placeholder="heartbeatPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
+            <el-button-group class="mode-switch">
+              <el-button :type="heartbeatPacketMode === 'hex' ? 'primary' : ''" @click="heartbeatPacketMode = 'hex'">HEX</el-button>
+              <el-button :type="heartbeatPacketMode === 'ascii' ? 'primary' : ''" @click="heartbeatPacketMode = 'ascii'">ASCII</el-button>
+            </el-button-group>
+          </div>
         </el-form-item>
         <el-form-item label="心跳间隔(秒)">
           <el-input-number v-model="channelForm.heartbeat_interval" :min="1" :max="3600" />
@@ -102,6 +114,8 @@ const channels = ref([])
 const serialPorts = ref([])
 const showAddDialog = ref(false)
 const isEdit = ref(false)
+const registerPacketMode = ref('hex')
+const heartbeatPacketMode = ref('hex')
 
 const channelForm = reactive({
   id: '',
@@ -137,6 +151,25 @@ const generateMqttId = () => {
   return `mqtt${n}`
 }
 
+const asciiToHex = (str) => {
+  let hex = ''
+  for (let i = 0; i < str.length; i++) {
+    hex += str.charCodeAt(i).toString(16).padStart(2, '0').toUpperCase()
+  }
+  return hex
+}
+
+const prepareChannelData = () => {
+  const data = { ...channelForm }
+  if (registerPacketMode.value === 'ascii' && data.register_packet) {
+    data.register_packet = asciiToHex(data.register_packet)
+  }
+  if (heartbeatPacketMode.value === 'ascii' && data.heartbeat_packet) {
+    data.heartbeat_packet = asciiToHex(data.heartbeat_packet)
+  }
+  return data
+}
+
 const resetForm = () => {
   isEdit.value = false
   channelForm.id = generateMqttId()
@@ -166,10 +199,11 @@ const getSerialName = (id) => {
 
 const saveChannel = async () => {
   try {
+    const data = prepareChannelData()
     if (isEdit.value) {
-      await api.put(`/channels/mqtt/${channelForm.id}`, channelForm)
+      await api.put(`/channels/mqtt/${channelForm.id}`, data)
     } else {
-      await api.post('/channels/mqtt', channelForm)
+      await api.post('/channels/mqtt', data)
     }
     showAddDialog.value = false
     await loadChannels()
@@ -259,5 +293,19 @@ const toggleChannel = async (row) => {
 
 .add-btn {
   margin-left: auto;
+}
+
+.packet-input-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.packet-input-group .el-input {
+  flex: 1;
+}
+
+.mode-switch {
+  flex-shrink: 0;
 }
 </style>

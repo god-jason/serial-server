@@ -62,7 +62,7 @@ channels:
       serial_port: serial1
       auto_reconnect: false
       reconnect_interval: 0
-      register_packet: ""
+      register_packet: "61626162"
       register_interval: 0
       heartbeat_packet: ""
       heartbeat_interval: 30
