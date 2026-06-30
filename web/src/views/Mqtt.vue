@@ -5,7 +5,7 @@
         <div class="card-header">
           <el-icon class="card-icon"><ChatDotRound /></el-icon>
           <span>MQTT通道</span>
-          <el-button type="primary" @click="showAddDialog = true" class="add-btn">
+          <el-button type="primary" @click="resetForm(); showAddDialog = true" class="add-btn">
             <el-icon><Plus /></el-icon>
             添加通道
           </el-button>
@@ -43,8 +43,11 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showAddDialog" :title="channelForm.id ? '编辑通道' : '添加MQTT通道'" width="600px">
+    <el-dialog v-model="showAddDialog" :title="isEdit ? '编辑通道' : '添加MQTT通道'" width="600px">
       <el-form :model="channelForm" label-width="120px">
+        <el-form-item label="ID">
+          <el-input v-model="channelForm.id" :disabled="isEdit" />
+        </el-form-item>
         <el-form-item label="名称">
           <el-input v-model="channelForm.name" placeholder="请输入通道名称" />
         </el-form-item>
@@ -98,6 +101,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const channels = ref([])
 const serialPorts = ref([])
 const showAddDialog = ref(false)
+const isEdit = ref(false)
 
 const channelForm = reactive({
   id: '',
@@ -125,6 +129,27 @@ const loadChannels = async () => {
   }
 }
 
+const generateMqttId = () => {
+  let n = 1
+  while (channels.value.some(c => c.id === `mqtt${n}`)) {
+    n++
+  }
+  return `mqtt${n}`
+}
+
+const resetForm = () => {
+  isEdit.value = false
+  channelForm.id = generateMqttId()
+  channelForm.name = ''
+  channelForm.type = 'mqtt'
+  channelForm.serial_port = ''
+  channelForm.enabled = true
+  channelForm.register_packet = ''
+  channelForm.heartbeat_packet = ''
+  channelForm.heartbeat_interval = 30
+  channelForm.mqtt = { broker: '', port: 1883, username: '', password: '', subscribe_topic: '', send_topic: '' }
+}
+
 const loadSerialPorts = async () => {
   try {
     const response = await api.get('/serial/ports')
@@ -141,7 +166,7 @@ const getSerialName = (id) => {
 
 const saveChannel = async () => {
   try {
-    if (channelForm.id) {
+    if (isEdit.value) {
       await api.put(`/channels/mqtt/${channelForm.id}`, channelForm)
     } else {
       await api.post('/channels/mqtt', channelForm)
@@ -156,6 +181,7 @@ const saveChannel = async () => {
 }
 
 const editChannel = (row) => {
+  isEdit.value = true
   Object.assign(channelForm, {
     id: row.id,
     name: row.name,

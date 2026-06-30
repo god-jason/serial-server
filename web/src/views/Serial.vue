@@ -5,7 +5,7 @@
         <div class="card-header">
           <el-icon class="card-icon"><DataLine /></el-icon>
           <span>串口列表</span>
-          <el-button type="primary" @click="showAddDialog = true" class="add-btn">
+          <el-button type="primary" @click="resetForm(); showAddDialog = true" class="add-btn">
             <el-icon><Plus /></el-icon>
             添加串口
           </el-button>
@@ -35,10 +35,17 @@
             <el-switch :value="row.enabled" />
           </template>
         </el-table-column>
+        <el-table-column label="状态" width="100">
+          <template #default="{ row }">
+            <el-tag :type="openedPorts.has(row.id) ? 'success' : 'info'">
+              {{ openedPorts.has(row.id) ? '已打开' : '已关闭' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="220">
           <template #default="{ row }">
-            <el-button @click="openPort(row)" text type="success">打开</el-button>
-            <el-button @click="closePort(row)" text>关闭</el-button>
+            <el-button @click="openPort(row)" text type="success" :disabled="openedPorts.has(row.id)">打开</el-button>
+            <el-button @click="closePort(row)" text :disabled="!openedPorts.has(row.id)">关闭</el-button>
             <el-button @click="editPort(row)" text type="primary">编辑</el-button>
             <el-button @click="deletePort(row)" text type="danger">删除</el-button>
           </template>
@@ -46,8 +53,11 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showAddDialog" :title="portForm.id ? '编辑串口' : '添加串口'" width="600px">
+    <el-dialog v-model="showAddDialog" :title="isEdit ? '编辑串口' : '添加串口'" width="600px">
       <el-form :model="portForm" label-width="120px">
+        <el-form-item label="ID">
+          <el-input v-model="portForm.id" :disabled="isEdit" />
+        </el-form-item>
         <el-form-item label="名称">
           <el-input v-model="portForm.name" placeholder="请输入串口名称" />
         </el-form-item>
@@ -121,6 +131,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 const serialPorts = ref([])
 const showAddDialog = ref(false)
+const isEdit = ref(false)
+const openedPorts = ref(new Set())
 
 const parityLabels = {
   none: '无',
@@ -154,11 +166,35 @@ onMounted(async () => {
 
 const loadPorts = async () => {
   const response = await api.get('/serial/ports')
-  serialPorts.value = response.data
+  serialPorts.value = response.data || []
+}
+
+const generateSerialId = () => {
+  let n = 1
+  while (serialPorts.value.some(p => p.id === `serial${n}`)) {
+    n++
+  }
+  return `serial${n}`
+}
+
+const resetForm = () => {
+  isEdit.value = false
+  portForm.id = generateSerialId()
+  portForm.name = ''
+  portForm.port = ''
+  portForm.baud_rate = 9600
+  portForm.data_bits = 8
+  portForm.parity = 'none'
+  portForm.stop_bits = 1
+  portForm.flow_control = 'none'
+  portForm.delay_packaging = 10
+  portForm.delay_timeout = 100
+  portForm.protocol = 'raw'
+  portForm.enabled = false
 }
 
 const savePort = async () => {
-  if (portForm.id) {
+  if (isEdit.value) {
     await api.put(`/serial/ports/${portForm.id}`, portForm)
   } else {
     await api.post('/serial/ports', portForm)
@@ -169,6 +205,7 @@ const savePort = async () => {
 }
 
 const editPort = (row) => {
+  isEdit.value = true
   Object.assign(portForm, row)
   showAddDialog.value = true
 }
@@ -186,13 +223,25 @@ const deletePort = async (row) => {
 }
 
 const openPort = async (row) => {
-  await api.post(`/serial/ports/${row.id}/open`)
-  ElMessage.success('串口已打开')
+  try {
+    await api.post(`/serial/ports/${row.id}/open`)
+    openedPorts.value.add(row.id)
+    ElMessage.success('串口已打开')
+  } catch (error) {
+    console.error('打开串口失败:', error)
+    ElMessage.error('打开串口失败')
+  }
 }
 
 const closePort = async (row) => {
-  await api.post(`/serial/ports/${row.id}/close`)
-  ElMessage.success('串口已关闭')
+  try {
+    await api.post(`/serial/ports/${row.id}/close`)
+    openedPorts.value.delete(row.id)
+    ElMessage.success('串口已关闭')
+  } catch (error) {
+    console.error('关闭串口失败:', error)
+    ElMessage.error('关闭串口失败')
+  }
 }
 </script>
 

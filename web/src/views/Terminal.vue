@@ -15,6 +15,7 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import '@xterm/xterm/css/xterm.css'
 
 const terminalContainer = ref(null)
 const connected = ref(false)
@@ -65,24 +66,38 @@ const connect = () => {
   }
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  ws = new WebSocket(`${protocol}//${window.location.host}/ws/terminal`)
+  const wsUrl = `${protocol}//${window.location.host}/ws/terminal`
+  console.log('Connecting to:', wsUrl)
+  ws = new WebSocket(wsUrl)
 
   ws.onopen = () => {
     connected.value = true
-    terminal.write('Connected to terminal\n')
+    terminal.write('Connected to terminal\r\n')
+  }
+
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error)
+    terminal.write('\r\nConnection error\r\n')
   }
 
   ws.onmessage = (event) => {
-    terminal.write(event.data)
+    if (event.data instanceof Blob) {
+      event.data.arrayBuffer().then(buffer => {
+        const text = new TextDecoder().decode(buffer)
+        terminal.write(text)
+      })
+    } else {
+      terminal.write(event.data)
+    }
   }
 
   ws.onclose = () => {
     connected.value = false
-    terminal.write('\nConnection closed\n')
+    terminal.write('\r\nConnection closed\r\n')
   }
 
   terminal.onData((data) => {
-    if (ws) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(data)
     }
   })

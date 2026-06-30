@@ -150,6 +150,11 @@ func (s *Server) setupRoutes() {
 	api.PUT("/channels/mqtt/:id", s.updateMQTTChannel)
 	api.DELETE("/channels/mqtt/:id", s.deleteMQTTChannel)
 
+	api.GET("/channels/http", s.listHTTPChannels)
+	api.POST("/channels/http", s.addHTTPChannel)
+	api.PUT("/channels/http/:id", s.updateHTTPChannel)
+	api.DELETE("/channels/http/:id", s.deleteHTTPChannel)
+
 	api.GET("/logs", s.getLogs)
 	api.GET("/stats", s.getStats)
 
@@ -734,6 +739,74 @@ func (s *Server) deleteMQTTChannel(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNotFound, gin.H{"error": "MQTT通道未找到"})
+}
+
+// listHTTPChannels 列出HTTP通道
+func (s *Server) listHTTPChannels(c *gin.Context) {
+	cfg := config.Get()
+	var httpChannels []config.ChannelConfig
+	for _, ch := range cfg.Channels {
+		if ch.Type == "http" {
+			httpChannels = append(httpChannels, ch)
+		}
+	}
+	c.JSON(http.StatusOK, httpChannels)
+}
+
+// addHTTPChannel 添加HTTP通道
+func (s *Server) addHTTPChannel(c *gin.Context) {
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "http"
+
+	cfg := config.Get()
+	cfg.Channels = append(cfg.Channels, channel)
+	config.Save()
+
+	c.JSON(http.StatusOK, gin.H{"success": true})
+}
+
+// updateHTTPChannel 更新HTTP通道
+func (s *Server) updateHTTPChannel(c *gin.Context) {
+	id := c.Param("id")
+	var channel config.ChannelConfig
+	if err := c.ShouldBindJSON(&channel); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数无效"})
+		return
+	}
+	channel.Type = "http"
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "http" {
+			cfg.Channels[i] = channel
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "HTTP通道未找到"})
+}
+
+// deleteHTTPChannel 删除HTTP通道
+func (s *Server) deleteHTTPChannel(c *gin.Context) {
+	id := c.Param("id")
+
+	cfg := config.Get()
+	for i, ch := range cfg.Channels {
+		if ch.ID == id && ch.Type == "http" {
+			cfg.Channels = append(cfg.Channels[:i], cfg.Channels[i+1:]...)
+			config.Save()
+			c.JSON(http.StatusOK, gin.H{"success": true})
+			return
+		}
+	}
+
+	c.JSON(http.StatusNotFound, gin.H{"error": "HTTP通道未找到"})
 }
 
 // getLogs 获取日志接口

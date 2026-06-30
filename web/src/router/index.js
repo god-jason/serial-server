@@ -48,6 +48,12 @@ const routes = [
         meta: { title: 'MQTT' }
       },
       {
+        path: 'http',
+        name: 'Http',
+        component: () => import('../views/Http.vue'),
+        meta: { title: 'HTTP' }
+      },
+      {
         path: 'network',
         name: 'Network',
         component: () => import('../views/Network.vue'),

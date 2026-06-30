@@ -11,9 +11,6 @@
         :default-active="activeMenu"
         router
         :collapse="isCollapse"
-        background-color="#1a1a2e"
-        text-color="#bfc9d4"
-        active-text-color="#409eff"
         :collapse-transition="false"
       >
         <el-menu-item index="/home">
@@ -23,7 +20,7 @@
 
         <el-sub-menu index="gateway">
           <template #title>
-            <el-icon><DataBoard /></el-icon>
+            <el-icon><Share /></el-icon>
             <span>网关</span>
           </template>
           <el-menu-item index="/serial">
@@ -31,16 +28,20 @@
             <span>串口</span>
           </el-menu-item>
           <el-menu-item index="/tcp-client">
-            <el-icon><DataLine /></el-icon>
+            <el-icon><Connection /></el-icon>
             <span>TCP客户端</span>
           </el-menu-item>
           <el-menu-item index="/tcp-server">
-            <el-icon><Connection /></el-icon>
+            <el-icon><Box /></el-icon>
             <span>TCP服务端</span>
           </el-menu-item>
           <el-menu-item index="/mqtt">
-            <el-icon><ChatDotRound /></el-icon>
+            <el-icon><Cloudy /></el-icon>
             <span>MQTT</span>
+          </el-menu-item>
+          <el-menu-item index="/http">
+            <el-icon><Link /></el-icon>
+            <span>HTTP</span>
           </el-menu-item>
         </el-sub-menu>
 
@@ -77,7 +78,7 @@
             <span>串口调试</span>
           </el-menu-item>
           <el-menu-item index="/terminal">
-            <el-icon><DataBoard /></el-icon>
+            <el-icon><Cpu /></el-icon>
             <span>终端</span>
           </el-menu-item>
         </el-sub-menu>
@@ -117,18 +118,21 @@ import { setLoggedIn } from '../stores/session'
 import {
   DataLine,
   House,
-  DataBoard,
   Connection,
   Monitor,
   Setting,
   PieChart,
   Document,
-  ChatDotRound,
   Location,
   DataAnalysis,
   Tools,
   Menu,
-  SwitchButton
+  SwitchButton,
+  Link,
+  Box,
+  Share,
+  Cloudy,
+  Cpu
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -141,6 +145,7 @@ const menuTitles = {
   '/tcp-client': 'TCP客户端',
   '/tcp-server': 'TCP服务端',
   '/mqtt': 'MQTT',
+  '/http': 'HTTP通道',
   '/network': '网络配置',
   '/maintenance': '系统维护',
   '/stats': '流量统计',
@@ -176,12 +181,11 @@ const logout = () => {
 
 .sidebar {
   width: 240px;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  color: #bfc9d4;
+  background: #fff;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   position: fixed;
   left: 0;
   top: 0;
@@ -194,11 +198,11 @@ const logout = () => {
 }
 
 .logo {
-  padding: 24px 20px;
+  padding: 20px;
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid #e6e6e6;
 }
 
 .logo-icon {
@@ -216,37 +220,16 @@ const logout = () => {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: white;
+  color: #303133;
 }
 
 .el-menu {
   border-right: none;
   flex: 1;
-  padding-top: 16px;
-}
-
-.el-menu-item {
-  margin: 4px 8px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.el-menu-item:hover {
-  background: rgba(64, 158, 255, 0.15);
 }
 
 .el-menu-item.is-active {
-  background: linear-gradient(135deg, #409eff 0%, #667eea 100%);
-  color: white;
-}
-
-.el-sub-menu__title {
-  margin: 4px 8px;
-  border-radius: 8px;
-}
-
-.el-sub-menu__title:hover {
-  background: rgba(64, 158, 255, 0.1);
+  color: #409eff;
 }
 
 .main-content {

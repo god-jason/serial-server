@@ -9,7 +9,7 @@
         <h2>串口服务器</h2>
         <p>Serial Server Management</p>
       </div>
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="0" class="login-form">
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="0" class="login-form" @submit.prevent="login">
         <el-form-item prop="password">
           <el-input
             v-model="form.password"

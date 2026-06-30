@@ -1,10 +1,10 @@
 <template>
-  <div class="tcp-server">
+  <div class="http">
     <el-card class="main-card">
       <template #header>
         <div class="card-header">
-          <el-icon class="card-icon"><Connection /></el-icon>
-          <span>TCP服务端通道</span>
+          <el-icon class="card-icon"><Link /></el-icon>
+          <span>HTTP通道</span>
           <el-button type="primary" @click="resetForm(); showAddDialog = true" class="add-btn">
             <el-icon><Plus /></el-icon>
             添加通道
@@ -19,9 +19,16 @@
             {{ getSerialName(row.serial_port) }}
           </template>
         </el-table-column>
-        <el-table-column prop="tcp_server.port" label="监听端口" width="100">
+        <el-table-column prop="http.url" label="请求URL" width="250">
           <template #default="{ row }">
-            {{ row.tcp_server?.port || '-' }}
+            {{ row.http?.url || '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="http.method" label="请求方法" width="100">
+          <template #default="{ row }">
+            <el-tag :type="row.http?.method === 'POST' ? 'danger' : 'info'">
+              {{ row.http?.method || '-' }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="enabled" label="状态" width="100">
@@ -38,7 +45,7 @@
       </el-table>
     </el-card>
 
-    <el-dialog v-model="showAddDialog" :title="isEdit ? '编辑通道' : '添加TCP服务端通道'" width="600px">
+    <el-dialog v-model="showAddDialog" :title="isEdit ? '编辑通道' : '添加HTTP通道'" width="600px">
       <el-form :model="channelForm" label-width="120px">
         <el-form-item label="ID">
           <el-input v-model="channelForm.id" :disabled="isEdit" />
@@ -51,8 +58,22 @@
             <el-option v-for="port in serialPorts" :key="port.id" :label="port.name" :value="port.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="监听端口">
-          <el-input-number v-model="channelForm.tcp_server.port" :min="1" :max="65535" />
+        <el-form-item label="请求URL">
+          <el-input v-model="channelForm.http.url" placeholder="例如: http://api.example.com/data" />
+        </el-form-item>
+        <el-form-item label="请求方法">
+          <el-select v-model="channelForm.http.method">
+            <el-option label="GET" value="GET" />
+            <el-option label="POST" value="POST" />
+            <el-option label="PUT" value="PUT" />
+            <el-option label="DELETE" value="DELETE" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="认证Token">
+          <el-input v-model="channelForm.http.token" placeholder="可选，用于Authorization头" />
+        </el-form-item>
+        <el-form-item label="Content-Type">
+          <el-input v-model="channelForm.http.content_type" placeholder="默认: application/json" />
         </el-form-item>
         <el-form-item label="注册包">
           <el-input v-model="channelForm.register_packet" placeholder="十六进制格式" />
@@ -75,7 +96,7 @@
 <script setup>
 import { ref, onMounted, reactive } from 'vue'
 import api from '../utils/api'
-import { Connection, Plus } from '@element-plus/icons-vue'
+import { Link, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const channels = ref([])
@@ -86,13 +107,13 @@ const isEdit = ref(false)
 const channelForm = reactive({
   id: '',
   name: '',
-  type: 'tcp_server',
+  type: 'http',
   serial_port: '',
   enabled: true,
   register_packet: '',
   heartbeat_packet: '',
   heartbeat_interval: 30,
-  tcp_server: { port: 8080 }
+  http: { url: '', method: 'POST', token: '', content_type: 'application/json' }
 })
 
 onMounted(async () => {
@@ -102,32 +123,32 @@ onMounted(async () => {
 
 const loadChannels = async () => {
   try {
-    const response = await api.get('/channels/tcp-server')
+    const response = await api.get('/channels/http')
     channels.value = response.data || []
   } catch (error) {
     console.error('获取通道失败:', error)
   }
 }
 
-const generateTcpsId = () => {
+const generateHttpId = () => {
   let n = 1
-  while (channels.value.some(c => c.id === `tcps${n}`)) {
+  while (channels.value.some(c => c.id === `http${n}`)) {
     n++
   }
-  return `tcps${n}`
+  return `http${n}`
 }
 
 const resetForm = () => {
   isEdit.value = false
-  channelForm.id = generateTcpsId()
+  channelForm.id = generateHttpId()
   channelForm.name = ''
-  channelForm.type = 'tcp_server'
+  channelForm.type = 'http'
   channelForm.serial_port = ''
   channelForm.enabled = true
   channelForm.register_packet = ''
   channelForm.heartbeat_packet = ''
   channelForm.heartbeat_interval = 30
-  channelForm.tcp_server = { port: 8080 }
+  channelForm.http = { url: '', method: 'POST', token: '', content_type: 'application/json' }
 }
 
 const loadSerialPorts = async () => {
@@ -147,9 +168,9 @@ const getSerialName = (id) => {
 const saveChannel = async () => {
   try {
     if (isEdit.value) {
-      await api.put(`/channels/tcp-server/${channelForm.id}`, channelForm)
+      await api.put(`/channels/http/${channelForm.id}`, channelForm)
     } else {
-      await api.post('/channels/tcp-server', channelForm)
+      await api.post('/channels/http', channelForm)
     }
     showAddDialog.value = false
     await loadChannels()
@@ -165,14 +186,17 @@ const editChannel = (row) => {
   Object.assign(channelForm, {
     id: row.id,
     name: row.name,
-    type: 'tcp_server',
+    type: 'http',
     serial_port: row.serial_port,
     enabled: row.enabled,
     register_packet: row.register_packet || '',
     heartbeat_packet: row.heartbeat_packet || '',
     heartbeat_interval: row.heartbeat_interval || 30,
-    tcp_server: {
-      port: row.tcp_server?.port || 8080
+    http: {
+      url: row.http?.url || '',
+      method: row.http?.method || 'POST',
+      token: row.http?.token || '',
+      content_type: row.http?.content_type || 'application/json'
     }
   })
   showAddDialog.value = true
@@ -185,7 +209,7 @@ const deleteChannel = async (row) => {
     type: 'warning'
   }).then(async () => {
     try {
-      await api.delete(`/channels/tcp-server/${row.id}`)
+      await api.delete(`/channels/http/${row.id}`)
       await loadChannels()
       ElMessage.success('删除成功')
     } catch (error) {
@@ -209,7 +233,7 @@ const toggleChannel = async (row) => {
 </script>
 
 <style scoped>
-.tcp-server {
+.http {
   width: 100%;
 }
 
@@ -228,7 +252,7 @@ const toggleChannel = async (row) => {
 }
 
 .card-icon {
-  color: #67c23a;
+  color: #909399;
   font-size: 20px;
 }
 

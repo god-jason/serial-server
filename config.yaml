@@ -1,42 +1,114 @@
 gateway:
-  ip: "192.168.1.100"
-  netmask: "255.255.255.0"
-  gateway: "192.168.1.1"
-  dns: "8.8.8.8"
-  dhcp: true
-
+    ip: 192.168.1.100
+    netmask: 255.255.255.0
+    gateway: 192.168.1.1
+    dns: 8.8.8.8
+    dhcp: true
 serial:
-  ports:
-    - id: "serial1"
-      name: "COM1"
-      port: "/dev/ttyS0"
-      baud_rate: 9600
-      data_bits: 8
-      parity: "none"
-      stop_bits: 1
-      flow_control: "none"
-      delay_packaging: 10
-      delay_timeout: 100
-      protocol: "raw"
-      enabled: false
-
-channels: []
-
+    ports:
+        - id: serial1
+          name: COM123
+          port: /dev/ttyS0
+          baud_rate: 9600
+          data_bits: 8
+          parity: none
+          stop_bits: 1
+          flow_control: none
+          delay_packaging: 10
+          delay_timeout: 100
+          protocol: raw
+          enabled: false
+        - id: serial3
+          name: d
+          port: ""
+          baud_rate: 9600
+          data_bits: 8
+          parity: none
+          stop_bits: 1
+          flow_control: none
+          delay_packaging: 10
+          delay_timeout: 100
+          protocol: raw
+          enabled: false
+        - id: serial4
+          name: sddd
+          port: ""
+          baud_rate: 9600
+          data_bits: 8
+          parity: none
+          stop_bits: 1
+          flow_control: none
+          delay_packaging: 10
+          delay_timeout: 100
+          protocol: raw
+          enabled: false
+        - id: serial2
+          name: sfff
+          port: ""
+          baud_rate: 9600
+          data_bits: 8
+          parity: none
+          stop_bits: 1
+          flow_control: none
+          delay_packaging: 10
+          delay_timeout: 100
+          protocol: raw
+          enabled: false
+channels:
+    - id: tcp
+      name: "1"
+      type: tcp_client
+      enabled: true
+      serial_port: serial1
+      auto_reconnect: false
+      reconnect_interval: 0
+      register_packet: ""
+      register_interval: 0
+      heartbeat_packet: ""
+      heartbeat_interval: 30
+      buffer_size: 0
+      tcp_client:
+        host: ""
+        port: 8080
+      tcp_server:
+        host: ""
+        port: 0
+      mqtt:
+        broker: ""
+        port: 0
+        username: ""
+        password: ""
+        client_id: ""
+        ca_file: ""
+        cert_file: ""
+        key_file: ""
+        subscribe_topic: ""
+        send_topic: ""
+        register_topic: ""
+        will_topic: ""
+        will_payload: ""
+        qos: 0
+        keep_alive: 0
+      http:
+        url: ""
+        method: ""
+        token: ""
+        content_type: ""
 system:
-  web_port: 8080
-  log_level: "info"
-  log_file: "logs/app.log"
-  log_max_size: 10
-  log_max_backups: 5
-  password: "admin"
-  oem:
-    name: "Serial Server"
-    logo: ""
-    theme_color: "#409EFF"
-  wifi:
-    ssid: ""
-    password: ""
-    enabled: false
-  module_4g:
-    apn: ""
-    enabled: false
+    web_port: 8080
+    log_level: info
+    log_file: logs/app.log
+    log_max_size: 10
+    log_max_backups: 5
+    password: admin
+    oem:
+        name: Serial Server
+        logo: ""
+        theme_color: '#409EFF'
+    wifi:
+        ssid: ""
+        password: ""
+        enabled: false
+    module_4g:
+        apn: ""
+        enabled: false

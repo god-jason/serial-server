@@ -94,44 +94,63 @@ func (w *WebSocketManager) RemoveTermConnection(sessionID string, conn *websocke
 
 // StartTerminal 启动xterm终端
 func (w *WebSocketManager) StartTerminal(conn *websocket.Conn) {
+	logrus.Info("WebSocket terminal 连接已建立")
+
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd")
+		cmd = exec.Command("cmd", "/c")
 	} else {
-		cmd = exec.Command("bash")
+		cmd = exec.Command("bash", "-l")
 	}
 
 	f, err := pty.Start(cmd)
 	if err != nil {
 		logrus.Error("启动终端失败: ", err)
+		conn.WriteMessage(websocket.TextMessage, []byte("Failed to start terminal: "+err.Error()+"\r\n"))
 		return
 	}
+
+	logrus.Info("终端进程已启动, PID: ", cmd.Process.Pid)
 
 	defer func() {
 		f.Close()
 		cmd.Wait()
+		logrus.Info("终端进程已退出")
 	}()
+
+	// 发送欢迎消息
+	conn.WriteMessage(websocket.TextMessage, []byte("\r\nTerminal connected. Type 'exit' to close.\r\n"))
 
 	go func() {
 		buf := make([]byte, 4096)
 		for {
 			n, err := f.Read(buf)
 			if err != nil {
-				break
+				logrus.Debug("读取终端数据结束: ", err)
+				return
 			}
-			if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-				break
+			if n > 0 {
+				if err := conn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
+					logrus.Debug("写入WebSocket失败: ", err)
+					return
+				}
 			}
 		}
 	}()
 
 	go func() {
 		for {
-			_, message, err := conn.ReadMessage()
+			msgType, message, err := conn.ReadMessage()
 			if err != nil {
-				break
+				logrus.Debug("读取WebSocket消息失败: ", err)
+				return
 			}
-			f.Write(message)
+			if msgType == websocket.TextMessage || msgType == websocket.BinaryMessage {
+				if _, err := f.Write(message); err != nil {
+					logrus.Debug("写入终端失败: ", err)
+					return
+				}
+			}
 		}
 	}()
 }
