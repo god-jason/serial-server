@@ -10,7 +10,7 @@
           <span>网关配置</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/channels">
-          <el-icon><Link /></el-icon>
+          <el-icon><Connection /></el-icon>
           <span>通道配置</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/serial">
@@ -26,19 +26,19 @@
           <span>系统维护</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/debug">
-          <el-icon><Bug /></el-icon>
+          <el-icon><DataAnalysis /></el-icon>
           <span>串口调试</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/terminal">
-          <el-icon><Terminal /></el-icon>
+          <el-icon><DataBoard /></el-icon>
           <span>终端</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/oem">
-          <el-icon><Tools /></el-icon>
+          <el-icon><OfficeBuilding /></el-icon>
           <span>OEM配置</span>
         </el-menu-item>
         <el-menu-item index="/dashboard/stats">
-          <el-icon><TrendCharts /></el-icon>
+          <el-icon><PieChart /></el-icon>
           <span>流量统计</span>
         </el-menu-item>
       </el-menu>
@@ -60,20 +60,20 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import * as EI from '@element-plus/icons-vue'
+import {
+  Location,
+  Connection,
+  DataLine,
+  Monitor,
+  Setting,
+  DataAnalysis,
+  DataBoard,
+  OfficeBuilding,
+  PieChart
+} from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
-
-const Location = EI.Locate || EI.Location
-const Link = EI.Link
-const DataLine = EI.DataLine || EI.DataAnalysis || EI.Cellphone
-const Monitor = EI.Monitor || EI.VideoCamera
-const Setting = EI.Setting
-const Bug = EI.Bug || EI.BugReport || EI.Warning
-const Terminal = EI.Terminal
-const Tools = EI.Tools || EI.Setting
-const TrendCharts = EI.TrendCharts || EI.LineChart || EI.BarChart
 
 const activeMenu = computed(() => route.path)
 

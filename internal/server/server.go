@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"sync"
@@ -132,7 +133,7 @@ func (s *Server) setupRoutes() {
 	s.gin.GET("/ws/terminal", s.websocketTerminal)
 
 	s.gin.NoRoute(func(c *gin.Context) {
-		c.FileFromFS(c.Request.URL.Path, http.FS(frontendFS))
+		c.FileFromFS(c.Request.URL.Path, http.FS(frontendSubFS))
 	})
 }
 
@@ -557,3 +558,8 @@ func (s *Server) websocketTerminal(c *gin.Context) {
 
 //go:embed dist
 var frontendFS embed.FS
+
+var frontendSubFS = func() fs.FS {
+	f, _ := fs.Sub(frontendFS, "dist")
+	return f
+}()
