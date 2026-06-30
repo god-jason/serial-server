@@ -18,33 +18,9 @@ serial:
           delay_timeout: 100
           protocol: raw
           enabled: false
-        - id: serial3
-          name: d
-          port: ""
-          baud_rate: 9600
-          data_bits: 8
-          parity: none
-          stop_bits: 1
-          flow_control: none
-          delay_packaging: 10
-          delay_timeout: 100
-          protocol: raw
-          enabled: false
-        - id: serial4
-          name: sddd
-          port: ""
-          baud_rate: 9600
-          data_bits: 8
-          parity: none
-          stop_bits: 1
-          flow_control: none
-          delay_packaging: 10
-          delay_timeout: 100
-          protocol: raw
-          enabled: false
         - id: serial2
-          name: sfff
-          port: ""
+          name: COM21
+          port: COM21
           baud_rate: 9600
           data_bits: 8
           parity: none
@@ -65,6 +41,45 @@ channels:
       register_packet: "61626162"
       register_interval: 0
       heartbeat_packet: ""
+      heartbeat_interval: 30
+      buffer_size: 0
+      tcp_client:
+        host: ""
+        port: 8080
+      tcp_server:
+        host: ""
+        port: 0
+      mqtt:
+        broker: ""
+        port: 0
+        username: ""
+        password: ""
+        client_id: ""
+        ca_file: ""
+        cert_file: ""
+        key_file: ""
+        subscribe_topic: ""
+        send_topic: ""
+        register_topic: ""
+        will_topic: ""
+        will_payload: ""
+        qos: 0
+        keep_alive: 0
+      http:
+        url: ""
+        method: ""
+        token: ""
+        content_type: ""
+    - id: tcp1
+      name: ""
+      type: tcp_client
+      enabled: true
+      serial_port: ""
+      auto_reconnect: false
+      reconnect_interval: 0
+      register_packet: ABAB
+      register_interval: 0
+      heartbeat_packet: "616264736466"
       heartbeat_interval: 30
       buffer_size: 0
       tcp_client:

@@ -66,8 +66,8 @@
           <div class="packet-input-group">
             <el-input v-model="channelForm.register_packet" :placeholder="registerPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
             <el-button-group class="mode-switch">
-              <el-button :type="registerPacketMode === 'hex' ? 'primary' : ''" @click="registerPacketMode = 'hex'">HEX</el-button>
-              <el-button :type="registerPacketMode === 'ascii' ? 'primary' : ''" @click="registerPacketMode = 'ascii'">ASCII</el-button>
+              <el-button :type="registerPacketMode === 'hex' ? 'primary' : ''" @click="switchRegisterPacketMode('hex')">HEX</el-button>
+              <el-button :type="registerPacketMode === 'ascii' ? 'primary' : ''" @click="switchRegisterPacketMode('ascii')">ASCII</el-button>
             </el-button-group>
           </div>
         </el-form-item>
@@ -75,8 +75,8 @@
           <div class="packet-input-group">
             <el-input v-model="channelForm.heartbeat_packet" :placeholder="heartbeatPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
             <el-button-group class="mode-switch">
-              <el-button :type="heartbeatPacketMode === 'hex' ? 'primary' : ''" @click="heartbeatPacketMode = 'hex'">HEX</el-button>
-              <el-button :type="heartbeatPacketMode === 'ascii' ? 'primary' : ''" @click="heartbeatPacketMode = 'ascii'">ASCII</el-button>
+              <el-button :type="heartbeatPacketMode === 'hex' ? 'primary' : ''" @click="switchHeartbeatPacketMode('hex')">HEX</el-button>
+              <el-button :type="heartbeatPacketMode === 'ascii' ? 'primary' : ''" @click="switchHeartbeatPacketMode('ascii')">ASCII</el-button>
             </el-button-group>
           </div>
         </el-form-item>
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import api from '../utils/api'
 import { DataLine, Plus } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -147,6 +147,36 @@ const asciiToHex = (str) => {
   return hex
 }
 
+const hexToAscii = (hex) => {
+  if (!hex) return ''
+  hex = hex.replace(/\s/g, '')
+  let str = ''
+  for (let i = 0; i < hex.length; i += 2) {
+    str += String.fromCharCode(parseInt(hex.substr(i, 2), 16))
+  }
+  return str
+}
+
+const switchRegisterPacketMode = (mode) => {
+  if (registerPacketMode.value === mode) return
+  if (mode === 'ascii' && channelForm.register_packet) {
+    channelForm.register_packet = hexToAscii(channelForm.register_packet)
+  } else if (mode === 'hex' && channelForm.register_packet) {
+    channelForm.register_packet = asciiToHex(channelForm.register_packet)
+  }
+  registerPacketMode.value = mode
+}
+
+const switchHeartbeatPacketMode = (mode) => {
+  if (heartbeatPacketMode.value === mode) return
+  if (mode === 'ascii' && channelForm.heartbeat_packet) {
+    channelForm.heartbeat_packet = hexToAscii(channelForm.heartbeat_packet)
+  } else if (mode === 'hex' && channelForm.heartbeat_packet) {
+    channelForm.heartbeat_packet = asciiToHex(channelForm.heartbeat_packet)
+  }
+  heartbeatPacketMode.value = mode
+}
+
 const prepareChannelData = () => {
   const data = { ...channelForm }
   if (registerPacketMode.value === 'ascii' && data.register_packet) {
@@ -160,6 +190,8 @@ const prepareChannelData = () => {
 
 const resetForm = () => {
   isEdit.value = false
+  registerPacketMode.value = 'hex'
+  heartbeatPacketMode.value = 'hex'
   channelForm.id = generateTcpId()
   channelForm.name = ''
   channelForm.type = 'tcp_client'
@@ -204,6 +236,8 @@ const saveChannel = async () => {
 
 const editChannel = (row) => {
   isEdit.value = true
+  registerPacketMode.value = 'hex'
+  heartbeatPacketMode.value = 'hex'
   Object.assign(channelForm, {
     id: row.id,
     name: row.name,

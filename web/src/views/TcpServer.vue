@@ -54,27 +54,6 @@
         <el-form-item label="监听端口">
           <el-input-number v-model="channelForm.tcp_server.port" :min="1" :max="65535" />
         </el-form-item>
-        <el-form-item label="注册包">
-          <div class="packet-input-group">
-            <el-input v-model="channelForm.register_packet" :placeholder="registerPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
-            <el-button-group class="mode-switch">
-              <el-button :type="registerPacketMode === 'hex' ? 'primary' : ''" @click="registerPacketMode = 'hex'">HEX</el-button>
-              <el-button :type="registerPacketMode === 'ascii' ? 'primary' : ''" @click="registerPacketMode = 'ascii'">ASCII</el-button>
-            </el-button-group>
-          </div>
-        </el-form-item>
-        <el-form-item label="心跳包">
-          <div class="packet-input-group">
-            <el-input v-model="channelForm.heartbeat_packet" :placeholder="heartbeatPacketMode === 'hex' ? '十六进制格式，如：010203' : 'ASCII格式'" />
-            <el-button-group class="mode-switch">
-              <el-button :type="heartbeatPacketMode === 'hex' ? 'primary' : ''" @click="heartbeatPacketMode = 'hex'">HEX</el-button>
-              <el-button :type="heartbeatPacketMode === 'ascii' ? 'primary' : ''" @click="heartbeatPacketMode = 'ascii'">ASCII</el-button>
-            </el-button-group>
-          </div>
-        </el-form-item>
-        <el-form-item label="心跳间隔(秒)">
-          <el-input-number v-model="channelForm.heartbeat_interval" :min="1" :max="3600" />
-        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false">取消</el-button>
@@ -94,8 +73,6 @@ const channels = ref([])
 const serialPorts = ref([])
 const showAddDialog = ref(false)
 const isEdit = ref(false)
-const registerPacketMode = ref('hex')
-const heartbeatPacketMode = ref('hex')
 
 const channelForm = reactive({
   id: '',
@@ -103,9 +80,6 @@ const channelForm = reactive({
   type: 'tcp_server',
   serial_port: '',
   enabled: true,
-  register_packet: '',
-  heartbeat_packet: '',
-  heartbeat_interval: 30,
   tcp_server: { port: 8080 }
 })
 
@@ -131,25 +105,6 @@ const generateTcpsId = () => {
   return `tcps${n}`
 }
 
-const asciiToHex = (str) => {
-  let hex = ''
-  for (let i = 0; i < str.length; i++) {
-    hex += str.charCodeAt(i).toString(16).padStart(2, '0').toUpperCase()
-  }
-  return hex
-}
-
-const prepareChannelData = () => {
-  const data = { ...channelForm }
-  if (registerPacketMode.value === 'ascii' && data.register_packet) {
-    data.register_packet = asciiToHex(data.register_packet)
-  }
-  if (heartbeatPacketMode.value === 'ascii' && data.heartbeat_packet) {
-    data.heartbeat_packet = asciiToHex(data.heartbeat_packet)
-  }
-  return data
-}
-
 const resetForm = () => {
   isEdit.value = false
   channelForm.id = generateTcpsId()
@@ -157,9 +112,6 @@ const resetForm = () => {
   channelForm.type = 'tcp_server'
   channelForm.serial_port = ''
   channelForm.enabled = true
-  channelForm.register_packet = ''
-  channelForm.heartbeat_packet = ''
-  channelForm.heartbeat_interval = 30
   channelForm.tcp_server = { port: 8080 }
 }
 
@@ -179,11 +131,10 @@ const getSerialName = (id) => {
 
 const saveChannel = async () => {
   try {
-    const data = prepareChannelData()
     if (isEdit.value) {
-      await api.put(`/channels/tcp-server/${channelForm.id}`, data)
+      await api.put(`/channels/tcp-server/${channelForm.id}`, channelForm)
     } else {
-      await api.post('/channels/tcp-server', data)
+      await api.post('/channels/tcp-server', channelForm)
     }
     showAddDialog.value = false
     await loadChannels()
@@ -202,9 +153,6 @@ const editChannel = (row) => {
     type: 'tcp_server',
     serial_port: row.serial_port,
     enabled: row.enabled,
-    register_packet: row.register_packet || '',
-    heartbeat_packet: row.heartbeat_packet || '',
-    heartbeat_interval: row.heartbeat_interval || 30,
     tcp_server: {
       port: row.tcp_server?.port || 8080
     }
@@ -268,19 +216,5 @@ const toggleChannel = async (row) => {
 
 .add-btn {
   margin-left: auto;
-}
-
-.packet-input-group {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.packet-input-group .el-input {
-  flex: 1;
-}
-
-.mode-switch {
-  flex-shrink: 0;
 }
 </style>
